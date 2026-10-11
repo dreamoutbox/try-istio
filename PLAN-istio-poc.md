@@ -88,12 +88,12 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
   - [x] Verify `orders` forwards trace headers
 - Done when: Kiali shows `gateway → orders → inventory` with mTLS locks; Jaeger shows a trace under `orders.demo` with spans from both services.
 
-### Phase 8: Polish and teardown [STATUS: TODO]
+### Phase 8: Polish and teardown [STATUS: DONE]
 - Goal: Fresh clone → running demo in minutes.
 - Script: `script/99-teardown.sh` (delete cluster; `CLEAN=1` also removes `.tools/`), `script/all.sh` (runs 00–06 in order) (both written)
 - Tasks:
-  - [ ] README: prerequisites (docker, kind, kubectl, go), quickstart, one section per phase with "what to look at"
-  - [ ] Add `.tools/` to `.gitignore`
+  - [x] README: prerequisites (docker, kind, kubectl, go), quickstart, one section per phase with "what to look at"
+  - [x] Add `.tools/` to `.gitignore`
   - [ ] Optional stretch: ambient mode on a branch, compare resource use and what `istioctl` shows
 - Done when: `script/all.sh` succeeds on a clean machine and every PASS line in phase 5 is green.
 
