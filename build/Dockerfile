@@ -1,11 +1,8 @@
 FROM golang:1.24-alpine AS builder
 
 WORKDIR /src
-# Copy dependency manifests first so the module-download layer is cached
-# separately from source changes.
-COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
+# No external dependencies, so no go.sum. Copy go.mod only for module context.
+COPY go.mod ./
 
 COPY . .
 

@@ -4,7 +4,7 @@ Two Go backend services (`orders` -> `inventory`) deployed on a local kind clust
 
 ## Prerequisites
 
-- Docker daemon running
+- `Docker`
 - `kind` (Kubernetes in Docker)
 - `kubectl`
 - `go` (>= 1.22)

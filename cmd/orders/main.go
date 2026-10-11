@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,9 +24,9 @@ type OrderResponse struct {
 
 // HandlerConfig configures the orders HTTP handler.
 type HandlerConfig struct {
-	InventoryURL string
-	HTTPClient   *http.Client
-	Logger       *slog.Logger
+	InventoryURL    string
+	HTTPClient      *http.Client
+	Logger          *slog.Logger
 	UpstreamTimeout time.Duration
 }
 
@@ -58,6 +59,34 @@ func NewHandler(cfg HandlerConfig) http.Handler {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
+	})
+
+	// GET /whoami — returns the JWT claims forwarded by the Istio sidecar.
+	// Istio's RequestAuthentication validates the token before the request
+	// reaches this handler, so we only need to base64-decode the payload.
+	mux.HandleFunc("GET /whoami", func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if !strings.HasPrefix(auth, "Bearer ") {
+			// Should not happen: Istio authz policy requires a valid token,
+			// but handle defensively.
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":"missing bearer token"}` + "\n"))
+			return
+		}
+
+		claims, err := jwtPayload(strings.TrimPrefix(auth, "Bearer "))
+		if err != nil {
+			cfg.Logger.Warn("failed to decode jwt payload", slog.Any("error", err))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"malformed token"}` + "\n"))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(append(claims, '\n'))
 	})
 
 	mux.HandleFunc("GET /orders/{sku}", func(w http.ResponseWriter, r *http.Request) {
@@ -124,6 +153,24 @@ func NewHandler(cfg HandlerConfig) http.Handler {
 	})
 
 	return mux
+}
+
+// jwtPayload base64url-decodes the payload segment of a JWT.
+// It does NOT verify the signature — Istio's sidecar already did that.
+func jwtPayload(token string) (json.RawMessage, error) {
+	parts := strings.SplitN(token, ".", 3)
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("expected 3 dot-separated segments, got %d", len(parts))
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("base64 decode: %w", err)
+	}
+	// Validate that it is valid JSON before returning.
+	if !json.Valid(payload) {
+		return nil, fmt.Errorf("payload is not valid JSON")
+	}
+	return json.RawMessage(payload), nil
 }
 
 func main() {

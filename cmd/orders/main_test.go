@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -12,17 +13,17 @@ import (
 
 func TestOrdersHandler(t *testing.T) {
 	tests := []struct {
-		name              string
-		url               string
-		requestHeaders    map[string]string
-		upstreamStatus    int
-		upstreamBody      string
-		upstreamDelay     time.Duration
-		clientTimeout     time.Duration
-		wantStatus        int
-		wantSKU           string
-		wantTraceForward  bool
-		checkPayload      bool
+		name             string
+		url              string
+		requestHeaders   map[string]string
+		upstreamStatus   int
+		upstreamBody     string
+		upstreamDelay    time.Duration
+		clientTimeout    time.Duration
+		wantStatus       int
+		wantSKU          string
+		wantTraceForward bool
+		checkPayload     bool
 	}{
 		{
 			name:       "health check",
@@ -30,8 +31,8 @@ func TestOrdersHandler(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
-			name:           "success forward and embed inventory",
-			url:            "/orders/sku-42",
+			name: "success forward and embed inventory",
+			url:  "/orders/sku-42",
 			requestHeaders: map[string]string{
 				"x-request-id": "req-123",
 				"traceparent":  "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
@@ -129,4 +130,98 @@ func TestOrdersHandler(t *testing.T) {
 			}
 		})
 	}
+}
+
+// fakeJWT builds a minimal JWT with the given payload and a garbage signature.
+// Sufficient for unit-testing jwtPayload and /whoami — neither verifies the sig.
+func fakeJWT(payload map[string]any) string {
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT"}`))
+	p, _ := json.Marshal(payload)
+	pl := base64.RawURLEncoding.EncodeToString(p)
+	return header + "." + pl + ".fakesig"
+}
+
+func TestJWTPayload(t *testing.T) {
+	t.Run("valid token decodes claims", func(t *testing.T) {
+		tok := fakeJWT(map[string]any{"iss": "testing@secure.istio.io", "sub": "alice"})
+		got, err := jwtPayload(tok)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		var claims map[string]any
+		if err := json.Unmarshal(got, &claims); err != nil {
+			t.Fatalf("result is not valid JSON: %v", err)
+		}
+		if claims["sub"] != "alice" {
+			t.Errorf("expected sub=alice, got %v", claims["sub"])
+		}
+	})
+
+	t.Run("wrong segment count", func(t *testing.T) {
+		if _, err := jwtPayload("only.two"); err == nil {
+			t.Error("expected error for 2-segment input")
+		}
+	})
+
+	t.Run("bad base64 in payload", func(t *testing.T) {
+		if _, err := jwtPayload("header.!!!.sig"); err == nil {
+			t.Error("expected error for invalid base64")
+		}
+	})
+
+	t.Run("payload not JSON", func(t *testing.T) {
+		notJSON := base64.RawURLEncoding.EncodeToString([]byte("not-json"))
+		if _, err := jwtPayload("h." + notJSON + ".s"); err == nil {
+			t.Error("expected error for non-JSON payload")
+		}
+	})
+}
+
+func TestWhoamiHandler(t *testing.T) {
+	handler := NewHandler(HandlerConfig{})
+
+	t.Run("missing token returns 401", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/whoami", nil)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("valid token returns claims as JSON", func(t *testing.T) {
+		tok := fakeJWT(map[string]any{
+			"iss":   "testing@secure.istio.io",
+			"sub":   "alice",
+			"email": "alice@example.com",
+		})
+		req := httptest.NewRequest(http.MethodGet, "/whoami", nil)
+		req.Header.Set("Authorization", "Bearer "+tok)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d; body: %s", w.Code, w.Body.String())
+		}
+		if ct := w.Header().Get("Content-Type"); ct != "application/json" {
+			t.Errorf("expected application/json Content-Type, got %q", ct)
+		}
+		var claims map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &claims); err != nil {
+			t.Fatalf("response is not valid JSON: %v", err)
+		}
+		if claims["sub"] != "alice" {
+			t.Errorf("expected sub=alice, got %v", claims["sub"])
+		}
+	})
+
+	t.Run("malformed token returns 400", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/whoami", nil)
+		req.Header.Set("Authorization", "Bearer notavalidjwt")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected 400, got %d", w.Code)
+		}
+	})
 }

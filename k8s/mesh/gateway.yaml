@@ -29,3 +29,10 @@ spec:
       backendRefs:
         - name: orders
           port: 80
+    - matches:
+        - path:
+            type: Exact
+            value: /whoami
+      backendRefs:
+        - name: orders
+          port: 80
