@@ -2,12 +2,12 @@
 
 Scope: two Go backend services, `orders` → `inventory`, on a local kind cluster with Istio sidecar mode. Purpose is to inspect, learn and try: mTLS, authorization, ingress, traffic shifting, resilience, observability.
 
-Shell scripts for each phase are already written in `script/`. App code, Dockerfile and manifests are what the phases below build. Scripts only apply the files named in each phase.
+Shell scripts for each phase are already written in `scripts/`. App code, Dockerfile and manifests are what the phases below build. Scripts only apply the files named in each phase.
 
 ## Layout
 
 ```
-script/            one script per phase (numbered from 00), lib.sh, all.sh, 99-teardown.sh
+scripts/           one script per phase (numbered from 00), lib.sh, all.sh, 99-teardown.sh
 cmd/orders/        main.go
 cmd/inventory/     main.go
 build/Dockerfile   one multi-stage Dockerfile, ARG SERVICE selects cmd/<service>
@@ -30,16 +30,16 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
 
 ### Phase 1: kind cluster + Gateway API CRDs + Istio control plane [STATUS: DONE]
 - Goal: Single-node kind cluster with Gateway API CRDs and a healthy istiod.
-- Script: `script/00-phase1-setup-kind-and-istio.sh` (written)
+- Script: `scripts/00-phase1-setup-kind-and-istio.sh` (written)
   - fetch pinned `istioctl` into `.tools/`, create kind cluster, apply Gateway API CRDs, `istioctl install` (profile `minimal`, access logs on, `holdApplicationUntilProxyStarts`), then inspect CRDs, GatewayClass, injector webhook, mesh config
 - Tasks:
   - [x] Run the script; read through each inspect step
   - [x] Confirm re-running is a no-op (idempotent)
-- Done when: `istiod` Ready, `istioctl verify-install` clean, `kubectl get gatewayclass` shows `istio`, `script/99-teardown.sh` then script 00 reproduces it.
+- Done when: `istiod` Ready, `istioctl verify-install` clean, `kubectl get gatewayclass` shows `istio`, `scripts/99-teardown.sh` then script 00 reproduces it.
 
 ### Phase 2: Two Go services, no mesh [STATUS: DONE]
 - Goal: `orders` calls `inventory` over plain Service DNS.
-- Script: `script/01-phase2-build-and-deploy-services.sh` (written): docker build both images, `kind load`, apply `k8s/base/`, smoke test from a throwaway pod
+- Script: `scripts/01-phase2-build-and-deploy-services.sh` (written): docker build both images, `kind load`, apply `k8s/base/`, smoke test from a throwaway pod
 - Tasks:
   - [x] `cmd/inventory/main.go` and `cmd/orders/main.go` per the contract above
   - [x] Table-driven `httptest` tests for both handlers (success, upstream failure, timeout, FAIL_RATE)
@@ -49,7 +49,7 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
 
 ### Phase 3: Sidecar injection + automatic mTLS [STATUS: DONE]
 - Goal: Both services in the mesh; prove traffic is mTLS while still PERMISSIVE.
-- Script: `script/02-phase3-enable-sidecar-and-mtls.sh` (written): label namespace, restart, create `curl` client pods (meshed in `demo`, non-meshed in `legacy`), then 4 proofs (SPIFFE identity in `xfcc`, `istioctl x describe`, workload certs, plaintext from `legacy` still accepted)
+- Script: `scripts/02-phase3-enable-sidecar-and-mtls.sh` (written): label namespace, restart, create `curl` client pods (meshed in `demo`, non-meshed in `legacy`), then 4 proofs (SPIFFE identity in `xfcc`, `istioctl x describe`, workload certs, plaintext from `legacy` still accepted)
 - Tasks:
   - [x] Run the script; compare pod container lists before and after
   - [x] Note the `xfcc` value contains `spiffe://cluster.local/ns/demo/sa/orders`
@@ -57,14 +57,14 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
 
 ### Phase 4: Ingress via Gateway API [STATUS: DONE]
 - Goal: Reach `orders` from the host through an Istio-managed gateway.
-- Script: `script/03-phase4-ingress-gateway.sh` (written): apply gateway, wait for the auto-created `demo-gateway-istio` Deployment, port-forward, curl, inspect with `proxy-status` / `proxy-config routes`
+- Script: `scripts/03-phase4-ingress-gateway.sh` (written): apply gateway, wait for the auto-created `demo-gateway-istio` Deployment, port-forward, curl, inspect with `proxy-status` / `proxy-config routes`
 - Tasks:
   - [x] `k8s/mesh/gateway.yaml`: `Gateway` named `demo-gateway` (gatewayClassName `istio`, listener HTTP 80, routes from same namespace) + `HTTPRoute` `/orders` → Service `orders:80`
 - Done when: `curl localhost:8080/orders/sku-1` returns the combined JSON; unknown path returns 404 from the gateway.
 
 ### Phase 5: STRICT mTLS + zero-trust authorization [STATUS: DONE]
 - Goal: Only the intended identities can call each service.
-- Script: `script/04-phase5-authz-policies.sh` (written): staged apply with PASS/FAIL checks at each stage (baseline → STRICT → deny-all → allow rules), then reads the denying sidecar's log
+- Script: `scripts/04-phase5-authz-policies.sh` (written): staged apply with PASS/FAIL checks at each stage (baseline → STRICT → deny-all → allow rules), then reads the denying sidecar's log
 - Tasks:
   - [x] `peer-auth-strict.yaml`: `PeerAuthentication` STRICT in `demo`
   - [x] `authz-deny-all.yaml`: empty-spec `AuthorizationPolicy`
@@ -73,7 +73,7 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
 
 ### Phase 6: Traffic management [STATUS: DONE]
 - Goal: Canary, timeout, fault injection, retries, all without touching Go code.
-- Script: `script/05-phase6-traffic-management.sh` (written): deploy v2, tally versions at default / 90-10 / 50-50, delay fault + 1s timeout, flaky v2 with and without retries, reset
+- Script: `scripts/05-phase6-traffic-management.sh` (written): deploy v2, tally versions at default / 90-10 / 50-50, delay fault + 1s timeout, flaky v2 with and without retries, reset
 - Tasks:
   - [x] `inventory-v2.yaml` (label `version: v2`, `VERSION=v2`, `FAIL_RATE=0`)
   - [x] `destination-rule.yaml` subsets `v1`/`v2`
@@ -82,7 +82,7 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
 
 ### Phase 7: Observability [STATUS: DONE]
 - Goal: See the mesh graph and a trace spanning both services.
-- Script: `script/06-phase7-observability.sh` (written): install Prometheus/Kiali/Jaeger from the local release's `samples/addons`, register Jaeger as an extension provider (re-runs `istioctl install` with the same flags + overlay), apply Telemetry, generate load, print dashboard commands
+- Script: `scripts/06-phase7-observability.sh` (written): install Prometheus/Kiali/Jaeger from the local release's `samples/addons`, register Jaeger as an extension provider (re-runs `istioctl install` with the same flags + overlay), apply Telemetry, generate load, print dashboard commands
 - Tasks:
   - [x] `k8s/observability/telemetry.yaml`: `Telemetry` in `demo` with tracing provider `jaeger` at 100% sampling and access logging provider `envoy`
   - [x] Verify `orders` forwards trace headers
@@ -90,12 +90,12 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
 
 ### Phase 8: Polish and teardown [STATUS: DONE]
 - Goal: Fresh clone → running demo in minutes.
-- Script: `script/99-teardown.sh` (delete cluster; `CLEAN=1` also removes `.tools/`), `script/all.sh` (runs 00–06 in order) (both written)
+- Script: `scripts/99-teardown.sh` (delete cluster; `CLEAN=1` also removes `.tools/`), `scripts/all.sh` (runs 00–06 in order) (both written)
 - Tasks:
   - [x] README: prerequisites (docker, kind, kubectl, go), quickstart, one section per phase with "what to look at"
   - [x] Add `.tools/` to `.gitignore`
   - [ ] Optional stretch: ambient mode on a branch, compare resource use and what `istioctl` shows
-- Done when: `script/all.sh` succeeds on a clean machine and every PASS line in phase 5 is green.
+- Done when: `scripts/all.sh` succeeds on a clean machine and every PASS line in phase 5 is green.
 
 ## Unknowns, risks, assumptions
 - Scripts are syntax-checked only (`bash -n`), not run against a live cluster. Expect small fixes on first run.

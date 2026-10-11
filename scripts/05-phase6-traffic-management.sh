@@ -44,4 +44,4 @@ run k delete -f "$ROOT/k8s/traffic/vs-v2-retry.yaml" --ignore-not-found
 run k -n "$NS" set env deploy/inventory-v2 FAIL_RATE=0
 try istioctl proxy-config routes "deploy/orders.$NS" --name 80
 
-log "Phase 6 done. Next: script/06-phase7-observability.sh"
+log "Phase 6 done. Next: scripts/06-phase7-observability.sh"

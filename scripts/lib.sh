@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared helpers, sourced by every phase script. Not meant to be run directly.
-#   PAUSE=1 script/NN-...sh   -> wait for <enter> between steps (inspect as you go)
+#   PAUSE=1 scripts/NN-...sh   -> wait for <enter> between steps (inspect as you go)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

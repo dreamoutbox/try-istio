@@ -39,4 +39,4 @@ cat <<EOF
   Prometheus (query: istio_requests_total):                    $IC dashboard prometheus
 EOF
 
-log "Phase 7 done. Teardown: script/99-teardown.sh"
+log "Phase 7 done. Teardown: scripts/99-teardown.sh"

@@ -26,4 +26,4 @@ run k -n "$NS" run curl-smoke --rm -i --restart=Never --image="$CURL_IMAGE" --co
   curl -sS --max-time 5 http://orders/orders/sku-1
 run k -n "$NS" logs deploy/orders --tail=5
 
-log "Phase 2 done. Next: script/02-phase3-enable-sidecar-and-mtls.sh"
+log "Phase 2 done. Next: scripts/02-phase3-enable-sidecar-and-mtls.sh"

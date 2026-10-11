@@ -32,4 +32,4 @@ log "Why 403: look at the denying sidecar's access log"
 try k -n "$NS" logs deploy/inventory-v1 -c istio-proxy --tail=5
 note "Identity = SPIFFE ID spiffe://cluster.local/ns/<ns>/sa/<serviceaccount>, so each Deployment needs its own ServiceAccount."
 
-log "Phase 5 done. Next: script/05-phase6-traffic-management.sh"
+log "Phase 5 done. Next: scripts/05-phase6-traffic-management.sh"

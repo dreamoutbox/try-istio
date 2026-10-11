@@ -23,4 +23,4 @@ run istioctl proxy-config routes "deploy/demo-gateway-istio.$NS"
 run k -n "$NS" logs deploy/demo-gateway-istio --tail=5
 
 note "Keep a forward open yourself with: kubectl --context $KUBE_CONTEXT -n $NS port-forward svc/demo-gateway-istio $GW_PORT:80"
-log "Phase 4 done. Next: script/04-phase5-authz-policies.sh"
+log "Phase 4 done. Next: scripts/04-phase5-authz-policies.sh"

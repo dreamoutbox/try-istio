@@ -39,4 +39,4 @@ note "xfcc is empty in that response: no client cert. Phase 5 flips this to STRI
 log "Peek at the sidecar access log (enabled via meshConfig.accessLogFile)"
 run k -n "$NS" logs deploy/inventory-v1 -c istio-proxy --tail=5
 
-log "Phase 3 done. Next: script/03-phase4-ingress-gateway.sh"
+log "Phase 3 done. Next: scripts/03-phase4-ingress-gateway.sh"

@@ -50,4 +50,4 @@ run k get mutatingwebhookconfigurations
 note "Effective mesh config (accessLogFile, holdApplicationUntilProxyStarts):"
 runsh "k -n istio-system get cm istio -o jsonpath='{.data.mesh}'"
 
-log "Phase 1 done. Next: script/01-phase2-build-and-deploy-services.sh"
+log "Phase 1 done. Next: scripts/01-phase2-build-and-deploy-services.sh"
