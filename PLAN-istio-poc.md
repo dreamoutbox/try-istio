@@ -37,14 +37,14 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
   - [x] Confirm re-running is a no-op (idempotent)
 - Done when: `istiod` Ready, `istioctl verify-install` clean, `kubectl get gatewayclass` shows `istio`, `script/99-teardown.sh` then script 00 reproduces it.
 
-### Phase 2: Two Go services, no mesh [STATUS: TODO]
+### Phase 2: Two Go services, no mesh [STATUS: DONE]
 - Goal: `orders` calls `inventory` over plain Service DNS.
 - Script: `script/01-phase2-build-and-deploy-services.sh` (written): docker build both images, `kind load`, apply `k8s/base/`, smoke test from a throwaway pod
 - Tasks:
-  - [ ] `cmd/inventory/main.go` and `cmd/orders/main.go` per the contract above
-  - [ ] Table-driven `httptest` tests for both handlers (success, upstream failure, timeout, FAIL_RATE)
-  - [ ] `build/Dockerfile`: `golang` build stage with `CGO_ENABLED=0`, `gcr.io/distroless/static:nonroot` runtime
-  - [ ] `k8s/base/` manifests (namespace `demo` WITHOUT injection label; file `00-` prefix so it applies first)
+  - [x] `cmd/inventory/main.go` and `cmd/orders/main.go` per the contract above
+  - [x] Table-driven `httptest` tests for both handlers (success, upstream failure, timeout, FAIL_RATE)
+  - [x] `build/Dockerfile`: `golang` build stage with `CGO_ENABLED=0`, `gcr.io/distroless/static:nonroot` runtime
+  - [x] `k8s/base/` manifests (namespace `demo` WITHOUT injection label; file `00-` prefix so it applies first)
 - Done when: `go test ./...` passes; script 01 prints orders JSON that embeds inventory JSON.
 
 ### Phase 3: Sidecar injection + automatic mTLS [STATUS: TODO]
