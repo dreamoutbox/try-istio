@@ -55,11 +55,11 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
   - [x] Note the `xfcc` value contains `spiffe://cluster.local/ns/demo/sa/orders`
 - Done when: pods show 2/2; `xfcc` present for meshed callers and empty for `legacy`.
 
-### Phase 4: Ingress via Gateway API [STATUS: TODO]
+### Phase 4: Ingress via Gateway API [STATUS: DONE]
 - Goal: Reach `orders` from the host through an Istio-managed gateway.
 - Script: `script/03-phase4-ingress-gateway.sh` (written): apply gateway, wait for the auto-created `demo-gateway-istio` Deployment, port-forward, curl, inspect with `proxy-status` / `proxy-config routes`
 - Tasks:
-  - [ ] `k8s/mesh/gateway.yaml`: `Gateway` named `demo-gateway` (gatewayClassName `istio`, listener HTTP 80, routes from same namespace) + `HTTPRoute` `/orders` → Service `orders:80`
+  - [x] `k8s/mesh/gateway.yaml`: `Gateway` named `demo-gateway` (gatewayClassName `istio`, listener HTTP 80, routes from same namespace) + `HTTPRoute` `/orders` → Service `orders:80`
 - Done when: `curl localhost:8080/orders/sku-1` returns the combined JSON; unknown path returns 404 from the gateway.
 
 ### Phase 5: STRICT mTLS + zero-trust authorization [STATUS: TODO]
