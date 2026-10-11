@@ -80,12 +80,12 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
   - [x] VirtualService `inventory` variants (all named `inventory`, so each apply replaces the last): weighted 90/10 and 50/50, delay fault (3s, 100%) with `timeout: 1s`, v2-only, v2-only + `retries` (attempts 3, `retryOn: 5xx`, `perTryTimeout: 1s`)
 - Done when: version tallies track the weights; delayed request fails near 1s; failure rate drops from ~50% to ~12% with retries.
 
-### Phase 7: Observability [STATUS: TODO]
+### Phase 7: Observability [STATUS: DONE]
 - Goal: See the mesh graph and a trace spanning both services.
 - Script: `script/06-phase7-observability.sh` (written): install Prometheus/Kiali/Jaeger from the local release's `samples/addons`, register Jaeger as an extension provider (re-runs `istioctl install` with the same flags + overlay), apply Telemetry, generate load, print dashboard commands
 - Tasks:
-  - [ ] `k8s/observability/telemetry.yaml`: `Telemetry` in `demo` with tracing provider `jaeger` at 100% sampling and access logging provider `envoy`
-  - [ ] Verify `orders` forwards trace headers
+  - [x] `k8s/observability/telemetry.yaml`: `Telemetry` in `demo` with tracing provider `jaeger` at 100% sampling and access logging provider `envoy`
+  - [x] Verify `orders` forwards trace headers
 - Done when: Kiali shows `gateway → orders → inventory` with mTLS locks; Jaeger shows a trace under `orders.demo` with spans from both services.
 
 ### Phase 8: Polish and teardown [STATUS: TODO]
