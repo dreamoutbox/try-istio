@@ -47,12 +47,12 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
   - [x] `k8s/base/` manifests (namespace `demo` WITHOUT injection label; file `00-` prefix so it applies first)
 - Done when: `go test ./...` passes; script 01 prints orders JSON that embeds inventory JSON.
 
-### Phase 3: Sidecar injection + automatic mTLS [STATUS: TODO]
+### Phase 3: Sidecar injection + automatic mTLS [STATUS: DONE]
 - Goal: Both services in the mesh; prove traffic is mTLS while still PERMISSIVE.
 - Script: `script/02-phase3-enable-sidecar-and-mtls.sh` (written): label namespace, restart, create `curl` client pods (meshed in `demo`, non-meshed in `legacy`), then 4 proofs (SPIFFE identity in `xfcc`, `istioctl x describe`, workload certs, plaintext from `legacy` still accepted)
 - Tasks:
-  - [ ] Run the script; compare pod container lists before and after
-  - [ ] Note the `xfcc` value contains `spiffe://cluster.local/ns/demo/sa/orders`
+  - [x] Run the script; compare pod container lists before and after
+  - [x] Note the `xfcc` value contains `spiffe://cluster.local/ns/demo/sa/orders`
 - Done when: pods show 2/2; `xfcc` present for meshed callers and empty for `legacy`.
 
 ### Phase 4: Ingress via Gateway API [STATUS: TODO]
