@@ -1,11 +1,18 @@
 FROM golang:1.24-alpine AS builder
 
 WORKDIR /src
-COPY go.mod ./
+# Copy dependency manifests first so the module-download layer is cached
+# separately from source changes.
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
 COPY . .
 
 ARG SERVICE
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/app ./cmd/${SERVICE}
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/app ./cmd/${SERVICE}
 
 FROM gcr.io/distroless/static:nonroot
 

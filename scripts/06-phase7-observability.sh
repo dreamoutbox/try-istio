@@ -9,18 +9,7 @@ for d in prometheus kiali jaeger; do run k -n istio-system rollout status "deplo
 run k -n istio-system get svc jaeger-collector
 
 log "Register Jaeger as a tracing extension provider (meshConfig change = re-run install with the SAME flags)"
-cat > "$TOOLS_DIR/tracing-overlay.yaml" <<'EOF'
-apiVersion: install.istio.io/v1alpha1
-kind: IstioOperator
-spec:
-  meshConfig:
-    extensionProviders:
-      - name: jaeger
-        opentelemetry:
-          service: jaeger-collector.istio-system.svc.cluster.local
-          port: 4317
-EOF
-run istioctl install -y -f "$TOOLS_DIR/tracing-overlay.yaml" "${ISTIO_INSTALL_FLAGS[@]}"
+run istioctl install -y -f "$ROOT/k8s/observability/tracing-overlay.yaml" "${ISTIO_INSTALL_FLAGS[@]}"
 run k -n istio-system rollout status deploy/istiod --timeout=180s
 
 log "Enable tracing (100% sampling, demo only) and access logs via the Telemetry API"
