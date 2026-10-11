@@ -71,13 +71,13 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
   - [x] `authz-allow.yaml`: gateway SA (`demo-gateway-istio`) → `orders`; `orders` SA → `inventory`, GET only
 - Done when: all `expect` lines PASS: legacy plaintext rejected, meshed `curl` SA gets 403 on both services, gateway path returns 200.
 
-### Phase 6: Traffic management [STATUS: TODO]
+### Phase 6: Traffic management [STATUS: DONE]
 - Goal: Canary, timeout, fault injection, retries, all without touching Go code.
 - Script: `script/05-phase6-traffic-management.sh` (written): deploy v2, tally versions at default / 90-10 / 50-50, delay fault + 1s timeout, flaky v2 with and without retries, reset
 - Tasks:
-  - [ ] `inventory-v2.yaml` (label `version: v2`, `VERSION=v2`, `FAIL_RATE=0`)
-  - [ ] `destination-rule.yaml` subsets `v1`/`v2`
-  - [ ] VirtualService `inventory` variants (all named `inventory`, so each apply replaces the last): weighted 90/10 and 50/50, delay fault (3s, 100%) with `timeout: 1s`, v2-only, v2-only + `retries` (attempts 3, `retryOn: 5xx`, `perTryTimeout: 1s`)
+  - [x] `inventory-v2.yaml` (label `version: v2`, `VERSION=v2`, `FAIL_RATE=0`)
+  - [x] `destination-rule.yaml` subsets `v1`/`v2`
+  - [x] VirtualService `inventory` variants (all named `inventory`, so each apply replaces the last): weighted 90/10 and 50/50, delay fault (3s, 100%) with `timeout: 1s`, v2-only, v2-only + `retries` (attempts 3, `retryOn: 5xx`, `perTryTimeout: 1s`)
 - Done when: version tallies track the weights; delayed request fails near 1s; failure rate drops from ~50% to ~12% with retries.
 
 ### Phase 7: Observability [STATUS: TODO]

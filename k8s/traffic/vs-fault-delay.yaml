@@ -1,0 +1,18 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: inventory
+  namespace: demo
+spec:
+  hosts:
+    - inventory
+  http:
+    - fault:
+        delay:
+          percentage:
+            value: 100.0
+          fixedDelay: 3s
+      timeout: 1s
+      route:
+        - destination:
+            host: inventory
