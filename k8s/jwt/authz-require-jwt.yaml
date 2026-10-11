@@ -3,14 +3,10 @@
 # Design:
 #   - The companion RequestAuthentication already handles signature verification
 #     and rejects malformed/expired tokens with 401.
-#   - This policy enforces *presence* of a valid JWT for /whoami.
-#     Requests without a token (no "source.principal") are denied here.
-#   - All other routes (e.g. /orders/**) continue to work without a token —
-#     keep the existing allow-gateway policy in place.
-#
-# "requestPrincipals" matches the "iss/sub" string set by Istio after a
-# successful JWT validation. The wildcard "*" means any valid token whose
-# issuer was declared in RequestAuthentication is accepted.
+#   - This policy enforces presence of a valid JWT on GET /whoami by explicitly
+#     denying requests where requestPrincipal is not from testing@secure.istio.io.
+#   - All other routes (e.g. /orders/**) continue to work without a token because
+#     this DENY rule is scoped only to /whoami while allow-gateway permits general ingress.
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
@@ -20,13 +16,13 @@ spec:
   selector:
     matchLabels:
       gateway.networking.k8s.io/gateway-name: demo-gateway
-  action: ALLOW
+  action: DENY
   rules:
-    - to:
+    - from:
+        - source:
+            notRequestPrincipals: ["testing@secure.istio.io/*"]
+      to:
         - operation:
             methods: ["GET"]
             paths: ["/whoami"]
-      when:
-        - key: request.auth.principal
-          # Any iss/sub coming from our RequestAuthentication issuer.
-          values: ["testing@secure.istio.io/*"]
+            ports: ["80"]

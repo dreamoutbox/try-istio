@@ -18,7 +18,7 @@ source "$(dirname "$0")/lib.sh"
 require kubectl curl python3
 
 log "Rebuild and reload the orders image (added GET /whoami)"
-run docker build -t orders:0.1.0 -f "$ROOT/build/Dockerfile" "$ROOT"
+run docker build -f "$ROOT/build/Dockerfile" --build-arg SERVICE=orders -t orders:0.1.0 "$ROOT"
 run kind load docker-image orders:0.1.0 --name "$CLUSTER_NAME"
 run k -n "$NS" rollout restart deploy/orders
 run k -n "$NS" rollout status deploy/orders --timeout=90s
@@ -83,7 +83,7 @@ cat <<'EOF'
 
   AuthorizationPolicy    (k8s/jwt/authz-require-jwt.yaml)
     - GET /whoami requires a valid principal (iss/sub from the token).
-    - Requests without a token are denied by this ALLOW rule (no match = deny).
+    - Requests without a valid token are denied by this DENY rule (notRequestPrincipals).
 
   GET /whoami            (cmd/orders/main.go)
     - Trusts Istio's prior validation; decodes the payload segment only.

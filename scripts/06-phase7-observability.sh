@@ -17,7 +17,7 @@ run k apply -f "$ROOT/k8s/observability/telemetry.yaml"
 
 log "Generate load through the gateway"
 gw_forward_start
-for _ in $(seq 1 200); do curl -s -o /dev/null "http://localhost:${GW_PORT}/orders/sku-1"; sleep 0.1; done
+for _ in $(seq 1 5); do curl -s -o /dev/null "http://localhost:${GW_PORT}/orders/sku-1"; sleep 0.1; done
 note "Reminder: orders must forward trace headers (traceparent, x-request-id, x-b3-*) to inventory, or traces will not join."
 
 log "Open the UIs (each command blocks; run in its own terminal)"
