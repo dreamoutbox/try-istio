@@ -28,13 +28,13 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
 - Both: Go ≥ 1.22 stdlib only (`http.ServeMux` method+wildcard patterns, `log/slog`), explicit `http.Server` timeouts, graceful shutdown on SIGTERM via `signal.NotifyContext`.
 - Kubernetes: one Deployment per version (`inventory-v1`, later `inventory-v2`), shared Service `inventory` selecting `app=inventory` only. Each Deployment has its own ServiceAccount (`orders`, `inventory`). Probes, resource requests/limits, `imagePullPolicy: IfNotPresent`, explicit image tag (no `:latest`).
 
-### Phase 1: kind cluster + Gateway API CRDs + Istio control plane [STATUS: TODO]
+### Phase 1: kind cluster + Gateway API CRDs + Istio control plane [STATUS: DONE]
 - Goal: Single-node kind cluster with Gateway API CRDs and a healthy istiod.
 - Script: `script/00-phase1-setup-kind-and-istio.sh` (written)
   - fetch pinned `istioctl` into `.tools/`, create kind cluster, apply Gateway API CRDs, `istioctl install` (profile `minimal`, access logs on, `holdApplicationUntilProxyStarts`), then inspect CRDs, GatewayClass, injector webhook, mesh config
 - Tasks:
-  - [ ] Run the script; read through each inspect step
-  - [ ] Confirm re-running is a no-op (idempotent)
+  - [x] Run the script; read through each inspect step
+  - [x] Confirm re-running is a no-op (idempotent)
 - Done when: `istiod` Ready, `istioctl verify-install` clean, `kubectl get gatewayclass` shows `istio`, `script/99-teardown.sh` then script 00 reproduces it.
 
 ### Phase 2: Two Go services, no mesh [STATUS: TODO]
