@@ -4,7 +4,7 @@
 #   - The companion RequestAuthentication already handles signature verification
 #     and rejects malformed/expired tokens with 401.
 #   - This policy enforces presence of a valid JWT on GET /whoami by explicitly
-#     denying requests where requestPrincipal is not from testing@secure.istio.io.
+#     denying requests where requestPrincipal is not from try-istio@local.
 #   - All other routes (e.g. /orders/**) continue to work without a token because
 #     this DENY rule is scoped only to /whoami while allow-gateway permits general ingress.
 apiVersion: security.istio.io/v1
@@ -20,7 +20,7 @@ spec:
   rules:
     - from:
         - source:
-            notRequestPrincipals: ["testing@secure.istio.io/*"]
+            notRequestPrincipals: ["try-istio@local/*"]
       to:
         - operation:
             methods: ["GET"]

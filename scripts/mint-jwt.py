@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Mint a demo JWT signed with the Istio demo RSA private key.
+"""Mint a demo JWT signed with an HS256 secret key.
 
-Usage: python3 mint-jwt.py <path-to-key.pem>
+Usage: python3 mint-jwt.py <path-to-jwt-secret.key> [sub] [ttl_seconds]
+
+  jwt-secret.key  File containing the raw base64url-encoded secret produced
+                  by scripts/gen-jwt-key.sh.
 
 Outputs a single line: the signed JWT token.
 
-This uses only the Python standard library (no PyJWT / cryptography needed).
-It constructs the JWT manually and signs with PKCS#1 v1.5 / SHA-256 via
-the `ssl` module (which wraps OpenSSL).
+Uses only the Python standard library (hmac, hashlib) — no third-party packages.
 """
 import base64
 import hashlib
+import hmac
 import json
-import os
-import ssl
-import struct
 import sys
 import time
 
@@ -23,46 +22,13 @@ def b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
-def load_der_private_key(pem_path: str) -> bytes:
-    """Read a PEM file and return the DER-encoded private key bytes."""
-    with open(pem_path, "rb") as f:
-        pem = f.read()
-    # Strip PEM armor and decode.
-    lines = pem.splitlines()
-    b64_lines = [l for l in lines if not l.startswith(b"-----")]
-    return base64.b64decode(b"".join(b64_lines))
-
-
-def rsa_sign_pkcs1_sha256(der_key: bytes, message: bytes) -> bytes:
-    """Sign message with RSA-SHA256 using the raw DER private key via OpenSSL."""
-    import subprocess
-    import tempfile
-
-    # Write DER key to a temp file and call openssl dgst for signing.
-    with tempfile.NamedTemporaryFile(suffix=".der", delete=False) as kf:
-        kf.write(der_key)
-        kf_path = kf.name
-    with tempfile.NamedTemporaryFile(delete=False) as mf:
-        mf.write(message)
-        mf_path = mf.name
-    try:
-        result = subprocess.run(
-            [
-                "openssl", "dgst", "-sha256", "-sign", kf_path,
-                "-keyform", "DER", mf_path,
-            ],
-            capture_output=True,
-            check=True,
-        )
-        return result.stdout
-    finally:
-        os.unlink(kf_path)
-        os.unlink(mf_path)
-
-
-def mint(key_pem_path: str, iss: str = "testing@secure.istio.io",
+def mint(key_path: str, iss: str = "try-istio@local",
          sub: str = "alice", ttl: int = 3600) -> str:
-    header = {"alg": "RS256", "typ": "JWT"}
+    with open(key_path) as f:
+        # Key file contains a base64url-encoded secret (no newline / padding).
+        secret = base64.urlsafe_b64decode(f.read().strip() + "==")
+
+    header = {"alg": "HS256", "typ": "JWT"}
     now = int(time.time())
     payload = {
         "iss": iss,
@@ -70,21 +36,25 @@ def mint(key_pem_path: str, iss: str = "testing@secure.istio.io",
         "iat": now,
         "exp": now + ttl,
         "groups": ["demo-users"],
-        "email": "alice@example.com",
+        "email": f"{sub}@example.com",
     }
 
     header_enc = b64url(json.dumps(header, separators=(",", ":")).encode())
     payload_enc = b64url(json.dumps(payload, separators=(",", ":")).encode())
     signing_input = f"{header_enc}.{payload_enc}".encode()
 
-    der_key = load_der_private_key(key_pem_path)
-    signature = rsa_sign_pkcs1_sha256(der_key, signing_input)
-
-    return f"{header_enc}.{payload_enc}.{b64url(signature)}"
+    sig = hmac.new(secret, signing_input, hashlib.sha256).digest()
+    return f"{header_enc}.{payload_enc}.{b64url(sig)}"
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <key.pem>", file=sys.stderr)
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <jwt-secret.key> [sub] [ttl_seconds]",
+              file=sys.stderr)
         sys.exit(1)
-    print(mint(sys.argv[1]))
+
+    key_path = sys.argv[1]
+    sub = sys.argv[2] if len(sys.argv) > 2 else "alice"
+    ttl = int(sys.argv[3]) if len(sys.argv) > 3 else 3600
+
+    print(mint(key_path, sub=sub, ttl=ttl))
