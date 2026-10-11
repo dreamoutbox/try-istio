@@ -81,6 +81,7 @@ func NewHandler(cfg HandlerConfig) http.Handler {
 			return
 		}
 
+		w.Header().Set("Connection", "close")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(append(data, '\n'))

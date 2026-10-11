@@ -47,13 +47,35 @@ require() {
 pod_of() { k -n "$1" get pod -l "app=$2" -o jsonpath='{.items[0].metadata.name}'; }
 
 # mesh_curl <ns> <curl args...>  -> run curl from the long-lived `curl` client pod in <ns>
-mesh_curl() { k -n "$1" exec deploy/curl -c curl -- curl -sS --max-time 5 "${@:2}"; }
+mesh_curl() { k -n "$1" exec deploy/curl -c curl -- curl -sS --max-time 5 -H "Connection: close" "${@:2}"; }
 
-# code_mesh <ns> <url>  -> HTTP status seen from the curl pod in <ns> (000 = connection failed)
-code_mesh() { mesh_curl "$1" -o /dev/null -w '%{http_code}' "$2" 2>/dev/null || true; }
+# code_mesh <ns> <url> [expected_code]  -> HTTP status seen from the curl pod in <ns> (000 = connection failed)
+code_mesh() {
+  local ns="$1" url="$2" want="${3:-}" code=""
+  for _ in $(seq 1 30); do
+    code="$(mesh_curl "$ns" -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || true)"
+    if [[ -z "$want" || "$code" == "$want" ]]; then
+      echo "$code"
+      return 0
+    fi
+    sleep 0.5
+  done
+  echo "$code"
+}
 
-# code_gw <path>  -> HTTP status via the ingress gateway port-forward
-code_gw() { curl -s --max-time 5 -o /dev/null -w '%{http_code}' "http://localhost:${GW_PORT}$1" || true; }
+# code_gw <path> [expected_code]  -> HTTP status via the ingress gateway port-forward
+code_gw() {
+  local path="$1" want="${2:-}" code=""
+  for _ in $(seq 1 30); do
+    code="$(curl -s --max-time 5 -H "Connection: close" -o /dev/null -w '%{http_code}' "http://localhost:${GW_PORT}$path" || true)"
+    if [[ -z "$want" || "$code" == "$want" ]]; then
+      echo "$code"
+      return 0
+    fi
+    sleep 0.5
+  done
+  echo "$code"
+}
 
 # expect <label> <want> <got>
 expect() {

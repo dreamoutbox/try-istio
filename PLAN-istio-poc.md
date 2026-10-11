@@ -62,13 +62,13 @@ Script conventions: `lib.sh` pins the kube context (`kind-istio-poc`), prints ev
   - [x] `k8s/mesh/gateway.yaml`: `Gateway` named `demo-gateway` (gatewayClassName `istio`, listener HTTP 80, routes from same namespace) + `HTTPRoute` `/orders` → Service `orders:80`
 - Done when: `curl localhost:8080/orders/sku-1` returns the combined JSON; unknown path returns 404 from the gateway.
 
-### Phase 5: STRICT mTLS + zero-trust authorization [STATUS: TODO]
+### Phase 5: STRICT mTLS + zero-trust authorization [STATUS: DONE]
 - Goal: Only the intended identities can call each service.
 - Script: `script/04-phase5-authz-policies.sh` (written): staged apply with PASS/FAIL checks at each stage (baseline → STRICT → deny-all → allow rules), then reads the denying sidecar's log
 - Tasks:
-  - [ ] `peer-auth-strict.yaml`: `PeerAuthentication` STRICT in `demo`
-  - [ ] `authz-deny-all.yaml`: empty-spec `AuthorizationPolicy`
-  - [ ] `authz-allow.yaml`: gateway SA (`demo-gateway-istio`) → `orders`; `orders` SA → `inventory`, GET only
+  - [x] `peer-auth-strict.yaml`: `PeerAuthentication` STRICT in `demo`
+  - [x] `authz-deny-all.yaml`: empty-spec `AuthorizationPolicy`
+  - [x] `authz-allow.yaml`: gateway SA (`demo-gateway-istio`) → `orders`; `orders` SA → `inventory`, GET only
 - Done when: all `expect` lines PASS: legacy plaintext rejected, meshed `curl` SA gets 403 on both services, gateway path returns 200.
 
 ### Phase 6: Traffic management [STATUS: TODO]
